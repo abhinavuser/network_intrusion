@@ -7,7 +7,7 @@ This project aims to detect network intrusions by analyzing TCP/IP dump files. T
 
 ## **Key Features**
 - **TCP/IP Packet Capture**: Uses Scapy to capture and analyze network traffic.
-- **Machine Learning Model**: Trains a Random Forest Classifier to detect anomalies in network traffic.
+- **Machine Learning Model**: Trains a Model to detect anomalies in network traffic.
 - **Real-time Sniffing**: Continuously monitors live network traffic for intrusions.
 - **Web Interface**: A simple Tkinter-based GUI to run scripts.
 
