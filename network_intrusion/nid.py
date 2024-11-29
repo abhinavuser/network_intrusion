@@ -4,6 +4,7 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix
 import logging
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -21,7 +22,6 @@ def load_pcap(file_path):
                 'protocol': pkt['IP'].proto,
                 'length': len(pkt),
             }
-            # Extract additional fields if available
             if pkt.haslayer(TCP):
                 pkt_data.update({
                     'src_port': pkt[TCP].sport,
@@ -41,13 +41,10 @@ def load_pcap(file_path):
 # Step 2: Preprocessing
 def preprocess_data(df):
     logging.info("Preprocessing data...")
-    # Fill missing values for ports and flags
     df['src_port'] = df.get('src_port', pd.Series([0] * len(df))).fillna(0).astype(int)
     df['dst_port'] = df.get('dst_port', pd.Series([0] * len(df))).fillna(0).astype(int)
     df['flags'] = df.get('flags', pd.Series(['None'] * len(df))).fillna('None')
     df['icmp_type'] = df.get('icmp_type', pd.Series([0] * len(df))).fillna(0).astype(int)
-    
-    # Convert categorical columns to dummy variables
     df = pd.get_dummies(df, columns=['src_ip', 'dst_ip', 'protocol', 'flags'])
     return df
 
@@ -65,9 +62,18 @@ def train_model(X, y):
     logging.info(f"Best Parameters: {grid_search.best_params_}")
     return grid_search.best_estimator_
 
-# Step 4: Main Execution
+# Step 4: Save Results to a File
+def save_results(report, confusion, file_name="classification_results.txt"):
+    logging.info(f"Saving results to {file_name}...")
+    with open(file_name, "w") as f:
+        f.write("Classification Report:\n")
+        f.write(report + "\n\n")
+        f.write("Confusion Matrix:\n")
+        f.write(str(confusion) + "\n")
+    logging.info("Results saved!")
+
+# Step 5: Main Execution
 if __name__ == "__main__":
-    # Load dataset
     file_path = 'http_PPI.cap'  # Replace with your file
     pcap_data = load_pcap(file_path)
     if pcap_data.empty:
@@ -77,8 +83,7 @@ if __name__ == "__main__":
     logging.info(f"Loaded {len(pcap_data)} packets")
     print(pcap_data.head())
 
-    # Simulate labels for the example (0: normal, 1: intrusion)
-    # Assuming unusual protocols or large payloads as potential intrusions
+    # Simulate labels (0: normal, 1: intrusion)
     pcap_data['label'] = pcap_data['length'].apply(lambda x: 1 if x > 1000 else 0)
 
     # Preprocess data
@@ -87,18 +92,20 @@ if __name__ == "__main__":
 
     # Split data
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    logging.info(f"Training data size: {X_train.shape}, Testing data size: {X_test.shape}")
 
     # Train model
     model = train_model(X_train, y_train)
-    logging.info("Model trained successfully!")
 
     # Test model
     predictions = model.predict(X_test)
-    logging.info("Testing completed!")
-    
+    report = classification_report(y_test, predictions)
+    confusion = confusion_matrix(y_test, predictions)
+
     # Output results
     print("Confusion Matrix:")
-    print(confusion_matrix(y_test, predictions))
+    print(confusion)
     print("\nClassification Report:")
-    print(classification_report(y_test, predictions))
+    print(report)
+
+    # Save results
+    save_results(report, confusion)
