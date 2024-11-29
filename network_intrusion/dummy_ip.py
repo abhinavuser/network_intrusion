@@ -30,5 +30,5 @@ def write_to_csv(filename, data):
         writer.writerows(data)
 
 data = generate_sample_traffic(100)
-write_to_csv('traffic.csv', data)
-print("CSV file 'traffic.csv' created.")
+write_to_csv('traffic_data.csv', data)
+print("CSV file 'traffic_data.csv' created.")
