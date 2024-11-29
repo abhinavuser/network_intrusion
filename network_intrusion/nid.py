@@ -5,11 +5,10 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix
 import logging
 import os
+import joblib
 
-# Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Step 1: Load TCP/IP dump
 def load_pcap(file_path):
     logging.info("Loading PCAP file...")
     packets = rdpcap(file_path)
@@ -38,7 +37,6 @@ def load_pcap(file_path):
             data.append(pkt_data)
     return pd.DataFrame(data)
 
-# Step 2: Preprocessing
 def preprocess_data(df):
     logging.info("Preprocessing data...")
     df['src_port'] = df.get('src_port', pd.Series([0] * len(df))).fillna(0).astype(int)
@@ -48,7 +46,6 @@ def preprocess_data(df):
     df = pd.get_dummies(df, columns=['src_ip', 'dst_ip', 'protocol', 'flags'])
     return df
 
-# Step 3: Train model with hyperparameter tuning
 def train_model(X, y):
     logging.info("Training the model...")
     model = RandomForestClassifier()
@@ -62,7 +59,6 @@ def train_model(X, y):
     logging.info(f"Best Parameters: {grid_search.best_params_}")
     return grid_search.best_estimator_
 
-# Step 4: Save Results to a File
 def save_results(report, confusion, file_name="classification_results.txt"):
     logging.info(f"Saving results to {file_name}...")
     with open(file_name, "w") as f:
@@ -72,9 +68,8 @@ def save_results(report, confusion, file_name="classification_results.txt"):
         f.write(str(confusion) + "\n")
     logging.info("Results saved!")
 
-# Step 5: Main Execution
 if __name__ == "__main__":
-    file_path = 'http_PPI.cap'  # Replace with your file
+    file_path = 'http_PPI.cap' 
     pcap_data = load_pcap(file_path)
     if pcap_data.empty:
         logging.error("No data extracted from PCAP. Please check the file.")
@@ -83,29 +78,22 @@ if __name__ == "__main__":
     logging.info(f"Loaded {len(pcap_data)} packets")
     print(pcap_data.head())
 
-    # Simulate labels (0: normal, 1: intrusion)
+    # Simulate labels 
     pcap_data['label'] = pcap_data['length'].apply(lambda x: 1 if x > 1000 else 0)
 
-    # Preprocess data
     X = preprocess_data(pcap_data.drop('label', axis=1))
     y = pcap_data['label']
-
-    # Split data
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-    # Train model
     model = train_model(X_train, y_train)
-
-    # Test model
     predictions = model.predict(X_test)
     report = classification_report(y_test, predictions)
     confusion = confusion_matrix(y_test, predictions)
-
-    # Output results
     print("Confusion Matrix:")
     print(confusion)
     print("\nClassification Report:")
     print(report)
 
-    # Save results
     save_results(report, confusion)
+
+joblib.dump(model, "rf_model.pkl")
+print("Model trained and saved as 'rf_model.pkl'")
